@@ -1,4 +1,3 @@
-
 from p_weather.sprites import Sprites
 from p_weather.openweathermap import OpenWeatherMap,WeatherInfo
 from p_weather.sunrise import sun
@@ -76,9 +75,17 @@ class DrawWeather():
 
     #todo: add thunderstorm
     #todo: add fog
-    def Draw(self,ypos:int,owm:OpenWeatherMap):
-
-
+    def Draw(self, ypos:int, owm:OpenWeatherMap, animate=False, frame_num=0):
+        """
+        Draw the weather landscape
+        
+        Parameters:
+            ypos: int - vertical position to start drawing
+            owm: OpenWeatherMap - weather data
+            animate: bool - whether to apply animation effects
+            frame_num: int - current frame number for animation
+        """
+        
         self.picheight = self.IMGHEIGHT
         self.picwidth = self.IMGEWIDTH
         self.ypos = ypos
@@ -115,12 +122,16 @@ class DrawWeather():
             smokeangle_deg=0
         if (smokeangle_deg>90):
             smokeangle_deg=90
-        self.sprite.DrawSmoke(xpos+21,self.picheight-oldy+23,smokeangle_deg)
+            
+        # Draw smoke with animation if requested
+        self.sprite.DrawSmoke(xpos+21, self.picheight-oldy+23, smokeangle_deg, animate)
         
         self.DrawTemperature(f,xpos+8,oldy)
-        self.sprite.DrawCloud(f.clouds,xpos,yclouds,self.XSTART,self.YSTEP/2)
-        self.sprite.DrawRain(f.rain,xpos,yclouds,self.XSTART,tline)
-        self.sprite.DrawSnow(f.snow,xpos,yclouds,self.XSTART,tline)
+        self.sprite.DrawCloud(f.clouds, xpos, yclouds, self.XSTART, self.YSTEP/2, animate)
+        
+        # Draw rain/snow with animation if requested
+        self.sprite.DrawRain(f.rain, xpos, yclouds, self.XSTART, tline, animate)
+        self.sprite.DrawSnow(f.snow, xpos, yclouds, self.XSTART, tline)
 
 
         t = datetime.datetime.now()#+datetime.timedelta(hours = 1, minutes=0)
@@ -243,18 +254,18 @@ class DrawWeather():
 
             # todo: apply sprite line width 
             if not (f in f_used):
-                self.sprite.DrawWind(f.windspeed,f.winddeg,ix,tline)
-                self.sprite.DrawCloud(f.clouds,ix,yclouds,self.XSTEP,self.YSTEP/2)
-                self.sprite.DrawRain(f.rain,ix,yclouds,self.XSTEP,tline0)
-                self.sprite.DrawSnow(f.snow,ix,yclouds,self.XSTEP,tline0)
+                self.sprite.DrawWind(f.windspeed, f.winddeg, ix, tline, animate)
+                self.sprite.DrawCloud(f.clouds, ix, yclouds, self.XSTEP, self.YSTEP/2, animate)
+                
+                # Draw rain/snow with animation if requested
+                self.sprite.DrawRain(f.rain, ix, yclouds, self.XSTEP, tline0, animate)
+                self.sprite.DrawSnow(f.snow, ix, yclouds, self.XSTEP, tline0)
+                
                 f_used.append(f)
                 
-            
 
             xpos+=self.XSTEP
             tf += dt
-
-
 
 
         BLACK = 0
