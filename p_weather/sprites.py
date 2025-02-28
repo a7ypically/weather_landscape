@@ -1,5 +1,5 @@
 import os
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, ImageEnhance
 import random
 import math
 
@@ -12,44 +12,98 @@ class Sprites():
 
     BLACK=0
     WHITE=1
-    RED  =2
+    RED=2
     TRANS=3
 
+    # Define new colors - these will be indices into our color_palette
+    BLUE = 4
+    GREEN = 5
+    YELLOW = 6
+    ORANGE = 7
+    PURPLE = 8
+    CYAN = 9
+    BROWN = 10
+    PINK = 11
+    GRAY = 12
+    
     PLASSPRITE = 10
     MINUSSPRITE = 11
     
     EXT = ".png"
     
 
-    def __init__(self,spritesdir,canvas):
+    def __init__(self, spritesdir, canvas):
         self.img = canvas
         self.pix = self.img.load()
         self.dir = spritesdir
         self.ext = self.EXT
         self.w, self.h = self.img.size
+        # Define RGB colors for each color index
+        self.color_palette = {
+            self.BLACK: (0, 0, 0),       # Black
+            self.WHITE: (255, 255, 255), # White
+            self.RED: (255, 0, 0),       # Red
+            self.BLUE: (0, 0, 255),      # Blue
+            self.GREEN: (0, 175, 0),     # Green
+            self.YELLOW: (255, 255, 0),  # Yellow
+            self.ORANGE: (255, 165, 0),  # Orange
+            self.PURPLE: (128, 0, 128),  # Purple
+            self.CYAN: (0, 255, 255),    # Cyan
+            self.BROWN: (139, 69, 19),   # Brown
+            self.PINK: (255, 192, 203),  # Pink
+            self.GRAY: (128, 128, 128)   # Gray
+        }
 
 
-
-    def Dot(self,x,y,color):
-    
-        #y = self.h - y
-    
+    def Dot(self, x, y, color):
         if (y>=self.h) or (x>=self.w) or (y<0) or (x<0):
             return
-    
-        self.pix[x,y] = color
         
+        # If color is an index, convert it to RGB color
+        if isinstance(color, int) and color in self.color_palette:
+            self.pix[x,y] = self.color_palette[color]
+        else:
+            self.pix[x,y] = color
 
-    def Draw(self,name,index,xpos,ypos,ismirror=False):
+    def get_color_by_name(self, name, index):
+        """Determine appropriate color based on sprite name"""
+        if name == "sun":
+            return self.YELLOW
+        elif name == "moon":
+            return self.CYAN
+        elif name == "cloud":
+            return self.GRAY
+        elif name == "flower":
+            return self.PINK if index % 2 == 0 else self.PURPLE
+        elif name == "house":
+            return self.BROWN
+        elif name == "tree":
+            return self.GREEN
+        elif name == "pine":
+            return self.GREEN
+        elif name == "palm":
+            return self.GREEN
+        elif name == "east":
+            return self.GREEN
+        elif name == "temp":
+            return self.RED
+        elif name == "digit":
+            return self.BLACK
+        else:
+            return self.BLACK
 
+    def Draw(self, name, index, xpos, ypos, ismirror=False):
         if (xpos<0) or (ypos<0):
             return 0
-
-        #print("DRAW '%s' #%i at %i,%i" % (name,index,xpos,ypos))
     
         imagefilename = "%s_%02i%s" % (name, index, self.ext)
-        imagepath = os.path.join(self.dir,imagefilename) 
+        imagepath = os.path.join(self.dir, imagefilename) 
         img = Image.open(imagepath)
+        
+        # Get appropriate color for this sprite
+        color_id = self.get_color_by_name(name, index)
+        color = self.color_palette[color_id]
+        
         if (ismirror):
             img = ImageOps.mirror(img)
         w, h = img.size
@@ -62,11 +116,11 @@ class Sprites():
                 if (ypos+y>=self.h) or (ypos+y<0):
                     continue
                 if (pix[x,y]==self.BLACK):
-                    self.Dot(xpos+x,ypos+y,self.Black)
+                    self.pix[xpos+x, ypos+y] = color  # Use the RGB color directly
                 elif (pix[x,y]==self.WHITE):
-                    self.Dot(xpos+x,ypos+y,self.White)
+                    self.pix[xpos+x, ypos+y] = self.color_palette[self.WHITE]
                 elif (pix[x,y]==self.RED):
-                    self.Dot(xpos+x,ypos+y,self.Black)
+                    self.pix[xpos+x, ypos+y] = self.color_palette[self.RED]
 
         return w
 
@@ -109,10 +163,6 @@ class Sprites():
         if (n2!=1):
             dx +=1                
         return dx
-        
-        
-        
-        
 
     def DrawClock(self,xpos,ypos,h,m):
         dx=0
@@ -124,10 +174,7 @@ class Sprites():
         dx+=w+1
         return dx
 
-
-
-
-    CLOUDWMAX =32
+    CLOUDWMAX = 32
     CLOUDS = [2,3,5,10,30,50]
     CLOUDK = 0.5
 
@@ -168,17 +215,17 @@ class Sprites():
     def DrawRain(self,value,xpos,ypos,width,tline):
         ypos+=1
         r = 1.0 - ( value / self.HEAVYRAIN ) / self.RAINFACTOR 
+        blue_color = self.color_palette[self.BLUE]
 
         for x in range(xpos,xpos+width):
-            
             for y in range(ypos,tline[x],2):
                 if (x>=self.w): 
                     continue
                 if (y>=self.h): 
                     continue
                 if (random.random()>r):
-                    self.pix[x,y] = self.Black
-                    self.pix[x,y-1] = self.Black
+                    self.pix[x,y] = blue_color
+                    self.pix[x,y-1] = blue_color
         
     HEAVYSNOW = 5.0
     SNOWFACTOR = 10
@@ -186,6 +233,7 @@ class Sprites():
     def DrawSnow(self,value,xpos,ypos,width,tline):
         ypos+=1
         r = 1.0 - ( value / self.HEAVYSNOW ) / self.SNOWFACTOR 
+        cyan_color = self.color_palette[self.CYAN]
 
         for x in range(xpos,xpos+width):
             for y in range(ypos,tline[x],2):
@@ -194,10 +242,7 @@ class Sprites():
                 if (y>=self.h): 
                     continue
                 if (random.random()>r):
-                    self.pix[x,y] = self.Black
-
-
-
+                    self.pix[x,y] = cyan_color
 
     def  DrawWind_degdist(self, deg1,deg2 ):
         h = max(deg1,deg2)
@@ -206,8 +251,6 @@ class Sprites():
         if (d>180):
             d = 360-d
         return d
-    
-
 
     def DrawWind_dirsprite(self,dir,dir0,name,list):
         count = [4,3,3,2,2,1,1]
@@ -217,13 +260,8 @@ class Sprites():
         if (n<len(count)):
             for i in range(0,count[n]):
                 list.append(name)
-        
-
-
-
 
     def DrawWind(self,speed,direction,xpos,tline):
-            
         list = []
 
         self.DrawWind_dirsprite(direction,0,  "pine",list)
@@ -273,15 +311,10 @@ class Sprites():
                 self.Draw(list[j],i,xx,tline[offset]+1,ismirror) 
                 ix+=9
                 j+=1
-            
-
-
 
     SMOKE_R_PX = 30
     PERSENT_DELTA = 4
     SMOKE_SIZE = 60
-
-    
 
     def DrawSmoke_makeline(self,angle_deg):
         a = (math.pi  * angle_deg) / 180
@@ -304,12 +337,10 @@ class Sprites():
                     yp = y
                     break
 
-    
-    
-
-
     def DrawSmoke(self,x0,y0,persent):
         dots = self.DrawSmoke_makeline(persent)
+        gray_color = self.color_palette[self.GRAY]
+        
         for d in dots:
             x = d[0]
             y = d[1]
@@ -322,27 +353,11 @@ class Sprites():
                     dx = 0
                     dy = 0
                     
-                self.Dot(x0+x+dx, self.h-(y0+y)+dy,self.Black)
-
-
-        
-    
-    
-
-
-
+                self.Dot(x0+x+dx, self.h-(y0+y)+dy, gray_color)
 
 if __name__ == "__main__":  
-
-
     img = Image.open('../test.bmp')
-    
-    
     s = Sprites('../sprite',img)
-    
-    
     s.Draw("house",0,100,100)
-    
     img.save("../tmp/sprites_test.bmp")
-    
-    
+

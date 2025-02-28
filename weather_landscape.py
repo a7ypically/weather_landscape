@@ -1,8 +1,3 @@
-
-
-
-
-
 import os
 from PIL import Image
 
@@ -38,7 +33,8 @@ class WeatherLandscape:
         owm = OpenWeatherMap(cfg)
         owm.FromAuto()
 
-        img = Image.open(self.TEMPLATE_FILENAME)
+        # Open the template image and convert it to RGB mode to support colors
+        img = Image.open(self.TEMPLATE_FILENAME).convert("RGB")
 
         spr = Sprites(self.SPRITES_DIR,img)
 
