@@ -25,6 +25,9 @@ class Sprites():
     BROWN = 10
     PINK = 11
     GRAY = 12
+    LIGHT_GRAY = 13
+    BRIGHT_BLUE = 14
+    BRIGHT_GREEN = 15
     
     PLASSPRITE = 10
     MINUSSPRITE = 11
@@ -41,21 +44,47 @@ class Sprites():
         # Animation properties
         self.current_frame = 0
         self.total_frames = 1
-        # Define RGB colors for each color index
-        self.color_palette = {
-            self.BLACK: (0, 0, 0),       # Black
-            self.WHITE: (255, 255, 255), # White
-            self.RED: (255, 0, 0),       # Red
-            self.BLUE: (0, 0, 255),      # Blue
-            self.GREEN: (0, 175, 0),     # Green
-            self.YELLOW: (255, 255, 0),  # Yellow
-            self.ORANGE: (255, 165, 0),  # Orange
-            self.PURPLE: (128, 0, 128),  # Purple
-            self.CYAN: (0, 255, 255),    # Cyan
-            self.BROWN: (139, 69, 19),   # Brown
-            self.PINK: (255, 192, 203),  # Pink
-            self.GRAY: (128, 128, 128)   # Gray
+        
+        # Initialize color palettes for both dark and light backgrounds
+        self.dark_bg_palette = {
+            self.BLACK: (180, 180, 180),   # Light gray for dark backgrounds
+            self.WHITE: (255, 255, 255),   # White
+            self.RED: (255, 60, 60),       # Bright red
+            self.BLUE: (80, 120, 255),     # Brighter blue
+            self.GREEN: (60, 220, 60),     # Bright green
+            self.YELLOW: (255, 255, 40),   # Yellow
+            self.ORANGE: (255, 165, 0),    # Orange
+            self.PURPLE: (200, 80, 220),   # Bright purple
+            self.CYAN: (0, 240, 255),      # Bright cyan
+            self.BROWN: (180, 120, 50),    # Light brown
+            self.PINK: (255, 130, 200),    # Bright pink
+            self.GRAY: (180, 180, 180),    # Light gray
+            self.LIGHT_GRAY: (230, 230, 230), # Very light gray
+            self.BRIGHT_BLUE: (30, 144, 255),  # Bright blue
+            self.BRIGHT_GREEN: (100, 255, 100)  # Bright green
         }
+        
+        self.light_bg_palette = {
+            self.BLACK: (30, 30, 30),      # Dark gray for light backgrounds
+            self.WHITE: (250, 250, 250),   # Slightly off-white
+            self.RED: (200, 0, 0),         # Dark red
+            self.BLUE: (0, 0, 180),        # Dark blue
+            self.GREEN: (0, 120, 0),       # Dark green
+            self.YELLOW: (180, 180, 0),    # Dark yellow
+            self.ORANGE: (200, 100, 0),    # Dark orange
+            self.PURPLE: (100, 0, 120),    # Dark purple
+            self.CYAN: (0, 150, 200),      # Dark cyan
+            self.BROWN: (100, 50, 0),      # Dark brown
+            self.PINK: (200, 0, 100),      # Dark pink
+            self.GRAY: (100, 100, 100),    # Medium gray
+            self.LIGHT_GRAY: (150, 150, 150), # Medium-light gray
+            self.BRIGHT_BLUE: (0, 80, 160),  # Dark blue
+            self.BRIGHT_GREEN: (0, 150, 0)   # Dark green
+        }
+        
+        # Default to dark background colors
+        self.color_palette = self.dark_bg_palette.copy()
+        
         # Initialize rain animation data
         self.rain_drops = []
         
@@ -81,25 +110,25 @@ class Sprites():
         elif name == "moon":
             return self.CYAN
         elif name == "cloud":
-            return self.GRAY
+            return self.LIGHT_GRAY  # Very light gray for clouds on black background
         elif name == "flower":
             return self.PINK if index % 2 == 0 else self.PURPLE
         elif name == "house":
             return self.BROWN
         elif name == "tree":
-            return self.GREEN
+            return self.BRIGHT_GREEN
         elif name == "pine":
-            return self.GREEN
+            return self.BRIGHT_GREEN
         elif name == "palm":
-            return self.GREEN
+            return self.BRIGHT_GREEN
         elif name == "east":
-            return self.GREEN
+            return self.BRIGHT_GREEN
         elif name == "temp":
             return self.RED
         elif name == "digit":
-            return self.BLACK
+            return self.WHITE  # White for better visibility
         else:
-            return self.BLACK
+            return self.WHITE  # Default to white instead of black
 
     def Draw(self, name, index, xpos, ypos, ismirror=False):
         if (xpos<0) or (ypos<0):
@@ -236,7 +265,7 @@ class Sprites():
         """Draw rain with optional animation"""
         ypos += 1
         r = 1.0 - (value / self.HEAVYRAIN) / self.RAINFACTOR
-        blue_color = self.color_palette[self.BLUE]
+        bright_blue = self.color_palette[self.BRIGHT_BLUE]  # Brighter blue for rain visibility
         
         # If we're animating, initialize rain drops on first frame
         if animate and not self.rain_drops:
@@ -246,7 +275,7 @@ class Sprites():
                 # Random position and animation timing
                 drop_x = xpos + random.randrange(width)
                 drop_y_start = ypos + random.randrange(20)  # Start position varies
-                drop_length = random.randint(1, 3)  # Raindrop length
+                drop_length = random.randint(2, 4)  # Longer raindrops for better visibility
                 # Speed varies slightly between frames
                 speed = random.uniform(0.8, 1.2)
                 # Each raindrop gets a random start frame
@@ -272,13 +301,13 @@ class Sprites():
                 if drop_y >= tline[drop['x']]:
                     # Create splash effect
                     if random.random() > 0.5:
-                        self.Dot(drop['x'] - 1, tline[drop['x']] - 1, blue_color)
-                        self.Dot(drop['x'] + 1, tline[drop['x']] - 1, blue_color)
+                        self.Dot(drop['x'] - 1, tline[drop['x']] - 1, bright_blue)
+                        self.Dot(drop['x'] + 1, tline[drop['x']] - 1, bright_blue)
                     continue
                     
                 # Draw the raindrop
                 for i in range(drop['length']):
-                    self.Dot(drop['x'], int(drop_y - i), blue_color)
+                    self.Dot(drop['x'], int(drop_y - i), bright_blue)
         else:
             # Draw static rain (original implementation)
             for x in range(xpos, xpos + width):
@@ -286,8 +315,8 @@ class Sprites():
                     if (x >= self.w) or (y >= self.h): 
                         continue
                     if (random.random() > r):
-                        self.pix[x, y] = blue_color
-                        self.pix[x, y-1] = blue_color
+                        self.pix[x, y] = bright_blue
+                        self.pix[x, y-1] = bright_blue
         
     HEAVYSNOW = 5.0
     SNOWFACTOR = 10
@@ -295,7 +324,7 @@ class Sprites():
     def DrawSnow(self, value, xpos, ypos, width, tline):
         ypos+=1
         r = 1.0 - (value / self.HEAVYSNOW) / self.SNOWFACTOR 
-        cyan_color = self.color_palette[self.CYAN]
+        cyan_color = self.color_palette[self.CYAN]  # Bright cyan for snow
 
         for x in range(xpos, xpos + width):
             for y in range(ypos, tline[x], 2):
@@ -305,6 +334,9 @@ class Sprites():
                     continue
                 if (random.random() > r):
                     self.pix[x, y] = cyan_color
+                    # Add second pixel to make snow more visible
+                    if (y+1 < tline[x]):
+                        self.pix[x, y+1] = cyan_color
 
     def DrawWind_degdist(self, deg1, deg2):
         h = max(deg1, deg2)
@@ -432,7 +464,7 @@ class Sprites():
 
     def DrawSmoke(self, x0, y0, persent, animate=False):
         """Draw smoke with optional animation"""
-        gray_color = self.color_palette[self.GRAY]
+        light_gray_color = self.color_palette[self.LIGHT_GRAY]  # Light gray for better visibility on black
         
         # If animating, adjust the angle slightly based on the frame
         if animate:
@@ -480,11 +512,23 @@ class Sprites():
                 if animate:
                     dx += offset_x
                 
-                self.Dot(x0+x+dx, self.h-(y0+y)+dy, gray_color)
+                self.Dot(x0+x+dx, self.h-(y0+y)+dy, light_gray_color)
                 
         # Restore the random state
         if animate:
             random.setstate(random_state)
+
+    def adjust_colors_for_background(self, is_dark_bg):
+        """
+        Adjust color palette based on background brightness
+        
+        Parameters:
+            is_dark_bg: bool - True if background is dark, False if light
+        """
+        if is_dark_bg:
+            self.color_palette = self.dark_bg_palette.copy()
+        else:
+            self.color_palette = self.light_bg_palette.copy()
 
 if __name__ == "__main__":  
     img = Image.open('../test.bmp')
