@@ -271,12 +271,6 @@ class WeatherLandscape:
         # Return the sunset position
         x_pos = x_start + diff_pixels
         
-        # Ensure the position is within bounds
-        if x_pos < x_start:
-            x_pos = x_start
-        elif x_pos >= self.WIDTH:
-            x_pos = self.WIDTH - 1
-            
         return x_pos
 
 
