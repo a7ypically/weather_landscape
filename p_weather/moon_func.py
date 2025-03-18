@@ -1,5 +1,7 @@
 #!/usr/bin/python3
 
+# Used example from https://github.com/nikospag/Python-Moon-phase
+
 import ephem
 import math
 from PIL import Image
