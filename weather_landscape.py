@@ -38,8 +38,15 @@ class WeatherLandscape:
     # Transition times in minutes
     TRANSITION_DURATION = 90  # Minutes before/after sunset/sunrise for color transition
 
+    # Moon phase settings
+    MOON_IMG = "pic/moon.png"
+    MOON_PHASE_IMG = "tmp/moon_phase.png"
+    MOON_TEXT = "tmp/moon.txt"
+    MOON_SIZE = 25  # Size of moon to display (25% of the original 40)
+    MOON_Y_POS = 5  # Vertical position of the moon
 
-    def __init__(self, use_dynamic_bg=True, use_black_bg=False, use_white_bg=False):
+
+    def __init__(self, use_dynamic_bg=True, use_black_bg=False, use_white_bg=False, show_moon_phase=False):
         """
         Initialize the weather landscape generator
         
@@ -47,12 +54,14 @@ class WeatherLandscape:
             use_dynamic_bg: bool - Use dynamic background based on time of day
             use_black_bg: bool - Force black background (overrides dynamic)
             use_white_bg: bool - Force white background (overrides dynamic and black)
+            show_moon_phase: bool - Show moon phase in the generated image/GIF
         """
         assert secrets.OWM_KEY != "000000000000000000", "Set OWM_KEY variable to your OpenWeather API key in secrets.py"
         
         self.use_dynamic_bg = use_dynamic_bg
         self.use_black_bg = use_black_bg and not use_white_bg  # White overrides black
         self.use_white_bg = use_white_bg
+        self.show_moon_phase = show_moon_phase
         
         # Initialize with default background - will be updated during render
         if self.use_white_bg:
@@ -61,6 +70,43 @@ class WeatherLandscape:
             self.background_color = self.BLACK_BG
         else:
             self.background_color = self.DAY_BG
+
+        # Generate moon phase if needed
+        if self.show_moon_phase:
+            self.process_moon_phase()
+
+
+    def process_moon_phase(self):
+        """Process moon phase image if moon display is enabled"""
+        try:
+            from p_weather.moon_func import process_moon_phase
+            
+            # Ensure tmp directory exists
+            os.makedirs(self.TMP_DIR, exist_ok=True)
+            
+            # Process moon phase and save the image
+            self.moon_data = process_moon_phase(
+                moonpath=self.MOON_IMG,
+                phasepath=self.MOON_PHASE_IMG,
+                textpath=self.MOON_TEXT
+            )
+            
+            # Load the processed moon phase image
+            self.moon_phase_img = Image.open(self.MOON_PHASE_IMG).convert("RGBA")
+            
+            # Resize if needed (maintain aspect ratio)
+            width, height = self.moon_phase_img.size
+            ratio = width / height
+            new_width = self.MOON_SIZE
+            new_height = int(new_width / ratio)
+            self.moon_phase_img = self.moon_phase_img.resize((new_width, new_height), Image.LANCZOS)
+            
+        except ImportError:
+            print("Warning: moon_func module not found. Moon phase will not be displayed.")
+            self.show_moon_phase = False
+        except Exception as e:
+            print(f"Error processing moon phase: {e}")
+            self.show_moon_phase = False
 
 
     def get_background_color(self, current_time: datetime.datetime, sunrise_time: datetime.datetime, sunset_time: datetime.datetime) -> Tuple[int, int, int]:
@@ -141,7 +187,7 @@ class WeatherLandscape:
         g = int(color1[1] + (color2[1] - color1[1]) * progress)
         b = int(color1[2] + (color2[2] - color1[2]) * progress)
         return (r, g, b)
-    
+
 
     def MakeImage(self)->Image:
         """Create a single static weather landscape image"""
@@ -169,11 +215,71 @@ class WeatherLandscape:
         spr.adjust_colors_for_background(is_dark_bg)
 
         art = DrawWeather(img, spr)
-        art.Draw(self.DRAWOFFSET, owm)
+        art.Draw(self.DRAWOFFSET, owm, animate=False, frame_num=0, show_moon_phase=self.show_moon_phase)
+
+        # Add moon phase if enabled
+        if self.show_moon_phase and hasattr(self, 'moon_phase_img'):
+            # Calculate moon position based on sunset time
+            t = datetime.datetime.now()
+            dt = datetime.timedelta(hours=3)  # Default time step used in DrawWeather
+            
+            # Get x-position for sunset time
+            x_offset = DrawWeather.XSTART
+            sunset_pos_x = self.calculate_moon_position(t, sunset_time, dt, DrawWeather.XSTART, DrawWeather.XSTEP)
+            
+            # Convert img to RGBA to support transparency
+            img_rgba = img.convert("RGBA")
+            
+            # Determine position - center the moon image at the sunset position
+            moon_width = self.moon_phase_img.width
+            x_pos = sunset_pos_x - (moon_width // 2)
+            
+            # Paste moon phase with transparency
+            img_rgba.paste(self.moon_phase_img, (x_pos, self.MOON_Y_POS), self.moon_phase_img)
+            
+            # Convert back to RGB
+            img = img_rgba.convert("RGB")
 
         return img
+
+    def calculate_moon_position(self, current_time, sunset_time, time_step, x_start, x_step):
+        """
+        Calculate the horizontal position for the moon based on sunset time
         
-    
+        Parameters:
+            current_time: datetime - Current time
+            sunset_time: datetime - Sunset time
+            time_step: timedelta - Time interval per step
+            x_start: int - Starting x-position for drawing
+            x_step: int - Horizontal step size
+            
+        Returns:
+            int: X-position for the moon
+        """
+        # Calculate seconds per pixel
+        forecast_hours = 3.0  # Matches the WeatherInfo.FORECAST_PERIOD_HOURS used in DrawWeather
+        seconds_per_pixel = (forecast_hours * 3600) / x_step
+        
+        # If sunset is before current time, add a day to sunset
+        if sunset_time < current_time:
+            sunset_time = sunset_time + datetime.timedelta(days=1)
+            
+        # Calculate time difference and convert to pixels
+        diff_seconds = (sunset_time - current_time).total_seconds()
+        diff_pixels = int(diff_seconds / seconds_per_pixel)
+        
+        # Return the sunset position
+        x_pos = x_start + diff_pixels
+        
+        # Ensure the position is within bounds
+        if x_pos < x_start:
+            x_pos = x_start
+        elif x_pos >= self.WIDTH:
+            x_pos = self.WIDTH - 1
+            
+        return x_pos
+
+
     def is_dark_background(self, color: Tuple[int, int, int]) -> bool:
         """
         Determine if a background color is considered dark
@@ -188,8 +294,8 @@ class WeatherLandscape:
         # Formula: (0.299*R + 0.587*G + 0.114*B)
         brightness = 0.299 * color[0] + 0.587 * color[1] + 0.114 * color[2]
         return brightness < 128
-        
-        
+
+
     def MakeAnimatedGif(self)->list:
         """Create an animated GIF of the weather landscape with rain and wind animations"""
         cfg = OpenWeatherMapSettings.Fill(secrets, self.TMP_DIR)
@@ -210,6 +316,11 @@ class WeatherLandscape:
         
         frames = []
         
+        # Calculate moon position for sunset
+        t = datetime.datetime.now()
+        dt = datetime.timedelta(hours=3)  # Default time step
+        sunset_pos_x = self.calculate_moon_position(t, sunset_time, dt, DrawWeather.XSTART, DrawWeather.XSTEP)
+        
         for frame_num in range(self.ANIMATION_FRAMES):
             # Create a fresh canvas for each frame with consistent dimensions and background color
             img = Image.new("RGB", (self.WIDTH, self.HEIGHT), color=bg_color)
@@ -224,7 +335,22 @@ class WeatherLandscape:
             
             # Draw the weather landscape
             art = DrawWeather(img, spr)
-            art.Draw(self.DRAWOFFSET, owm, animate=True, frame_num=frame_num)
+            art.Draw(self.DRAWOFFSET, owm, animate=True, frame_num=frame_num, show_moon_phase=self.show_moon_phase)
+            
+            # Add moon phase if enabled
+            if self.show_moon_phase and hasattr(self, 'moon_phase_img'):
+                # Convert img to RGBA to support transparency
+                img_rgba = img.convert("RGBA")
+                
+                # Determine position - center the moon image at the sunset position
+                moon_width = self.moon_phase_img.width
+                x_pos = sunset_pos_x - (moon_width // 2)
+                
+                # Paste moon phase with transparency
+                img_rgba.paste(self.moon_phase_img, (x_pos, self.MOON_Y_POS), self.moon_phase_img)
+                
+                # Convert back to RGB
+                img = img_rgba.convert("RGB")
             
             frames.append(img)
         
@@ -247,8 +373,8 @@ class WeatherLandscape:
         outfilepath = self.TmpFilePath(f"{self.OUT_FILENAME}{placekey}_{bg_indicator}{self.OUT_FILEEXT}")
         img.save(outfilepath) 
         return outfilepath
-        
-    
+
+
     def SaveAnimatedGif(self)->str:
         """Save an animated weather landscape GIF"""
         frames = self.MakeAnimatedGif()
@@ -262,7 +388,10 @@ class WeatherLandscape:
         else:
             bg_indicator = "dynamic"
             
-        outfilepath = self.TmpFilePath(f"{self.OUT_FILENAME}{placekey}_{bg_indicator}{self.OUT_GIF_EXT}")
+        # Add moon indicator if moon phase is shown
+        moon_indicator = "_moon" if self.show_moon_phase else ""
+            
+        outfilepath = self.TmpFilePath(f"{self.OUT_FILENAME}{placekey}_{bg_indicator}{moon_indicator}{self.OUT_GIF_EXT}")
         
         # Save as animated GIF with consistent frame handling
         frames[0].save(
@@ -276,7 +405,7 @@ class WeatherLandscape:
         )
         
         return outfilepath
-        
+
 
     def TmpFilePath(self,filename):
         return os.path.join(self.TMP_DIR,filename)

@@ -75,7 +75,7 @@ class DrawWeather():
 
     #todo: add thunderstorm
     #todo: add fog
-    def Draw(self, ypos:int, owm:OpenWeatherMap, animate=False, frame_num=0):
+    def Draw(self, ypos:int, owm:OpenWeatherMap, animate=False, frame_num=0, show_moon_phase=False):
         """
         Draw the weather landscape
         
@@ -84,13 +84,14 @@ class DrawWeather():
             owm: OpenWeatherMap - weather data
             animate: bool - whether to apply animation effects
             frame_num: int - current frame number for animation
+            show_moon_phase: bool - whether moon phase is enabled
         """
         
         self.picheight = self.IMGHEIGHT
         self.picwidth = self.IMGEWIDTH
         self.ypos = ypos
 
-        nforecasrt = ( (self.picwidth-self.XSTART)/self.XSTEP ) 
+        nforecasrt = int((self.picwidth-self.XSTART)/self.XSTEP) 
         maxtime = datetime.datetime.now() + datetime.timedelta(hours=WeatherInfo.FORECAST_PERIOD_HOURS*nforecasrt)
 
         (self.tmin,self.tmax) = owm.GetTempRange(maxtime)
@@ -142,10 +143,8 @@ class DrawWeather():
         
         x0 = int(self.XSTART)
         xpos = x0
-        nforecasrt = int(nforecasrt)
-
-        n = int( (self.XSTEP-self.XFLAT)/2 )
-        for i in range(nforecasrt+1):
+        n = int((self.XSTEP-self.XFLAT)/2)
+        for i in range(int(nforecasrt)+1):
             f = owm.Get(tf)
             if (f==None):
                 continue
@@ -178,7 +177,7 @@ class DrawWeather():
         tf = t 
         xpos = self.XSTART
         objcounter=0
-        for i in range(nforecasrt+1):
+        for i in range(int(nforecasrt)+1):
             f = owm.Get(tf)
             if (f==None):
                 continue
@@ -201,7 +200,9 @@ class DrawWeather():
 
             if (tf<=t_sunset) and (tf+dt>t_sunset):
                 dx = self.TimeDiffToPixels(t_sunset-tf)  - self.XSTEP/2
-                self.sprite.Draw("moon",0,xpos+dx,ymoon)
+                # Only draw the static moon if moon phase is not enabled
+                if not show_moon_phase:
+                    self.sprite.Draw("moon",0,xpos+dx,ymoon)
                 objcounter+=1
                 if (objcounter==2):
                     break;
@@ -229,10 +230,10 @@ class DrawWeather():
         istmaxprinted = False
         tf = t 
         xpos = self.XSTART
-        n = int( (self.XSTEP-self.XFLAT)/2 )
+        n = int((self.XSTEP-self.XFLAT)/2)
         f_used = []
         
-        for i in range(nforecasrt+1):
+        for i in range(int(nforecasrt)+1):
             f = owm.Get(tf)
             if (f==None):
                 continue
@@ -275,7 +276,3 @@ class DrawWeather():
                 self.sprite.Dot(x,tline0[x],Sprites.BLACK)
             else:
                 print("out of range: %i - %i(max %i)" % (x,tline0[x],self.picheight))
-
-
-
-
